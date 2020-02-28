@@ -1,6 +1,5 @@
 {
-  "name": "root",
-  "private": true,
+  "name": "puyogg",
   "scripts": {
     "bootstrap": "lerna bootstrap",
     "clean": "lerna run clean",
