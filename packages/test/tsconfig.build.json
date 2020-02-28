@@ -6,11 +6,11 @@
     "rootDir": "./src"
   },
 
-  "references": [{
-    "path": "../puyosim/tsconfig.build.json"
-  }],
+  "references": [
+    {
+      "path": "../puyosim/tsconfig.build.json"
+    }
+  ],
 
-  "include": [
-    "src/**/*"
-  ]
+  "include": ["src/**/*"]
 }
