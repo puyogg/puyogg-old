@@ -1,0 +1,4 @@
+# npm
+node_modules
+tsconfig.build.tsbuildinfo
+dist
