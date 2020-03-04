@@ -2,6 +2,7 @@ interface Settings {
   rows: number;
   cols: number;
   hrows: number;
+  targetPoint: number;
   puyoToPop: number;
   hrowBehavior: 'COMPILE' | 'SEGA';
   bonusType: 'CLASSIC' | 'FEVER';
@@ -15,6 +16,7 @@ function defaultSettings(): Settings {
     rows: 13,
     cols: 6,
     hrows: 1,
+    targetPoint: 70,
     puyoToPop: 4,
     hrowBehavior: 'SEGA',
     bonusType: 'CLASSIC',

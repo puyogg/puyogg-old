@@ -1,38 +1,61 @@
 import Puyo from './puyo';
-type NextAction = 'INIT' | 'NEEDS_TO_DROP' | 'NEEDS_TO_POP' | 'FINISHED';
+import { puyoToCharMatrix, transposeMatrix } from './matrix';
+type NextAction = 'CHECK_FOR_DROPS' | 'CHECK_FOR_POPS' | 'NEEDS_TO_DROP' | 'NEEDS_TO_POP' | 'FINISHED';
 
 interface StateData {
   matrix: Puyo[][];
-  score: number;
-  garbage: number;
+  linkScore: number;
+  totalScore: number;
+  linkGarbage: number;
+  totalGarbage: number;
+  linkPuyoCleared: number;
+  linkTotalBonus: number;
+  oldLeftoverNuisance: number; // Leftover nuisance points, informed by the previous link
+  newLeftoverNuisance: number; // Next NL count, to send to the next link
   chainLength: number;
   requiresDrop: boolean;
   requiresPop: boolean;
   toDrop: number[][];
-  toPop: Puyo[][];
+  colorsToPop: Puyo[][];
+  garbageToPop: Puyo[];
   action: NextAction;
 }
 
+/** Wrapper class for holding the matrix and its state information. */
 class MatrixState {
   matrix: Puyo[][];
-  score: number;
-  garbage: number;
+  linkScore: number;
+  totalScore: number;
+  linkGarbage: number;
+  totalGarbage: number;
+  linkPuyoCleared: number;
+  linkTotalBonus: number;
+  oldLeftoverNuisance: number;
+  newLeftoverNuisance: number;
   chainLength: number;
   requiresDrop: boolean;
   requiresPop: boolean;
   toDrop: number[][];
-  toPop: Puyo[][];
+  colorsToPop: Puyo[][];
+  garbageToPop: Puyo[];
   action: NextAction;
 
   constructor(data: StateData) {
     this.matrix = data.matrix;
-    this.score = data.score;
-    this.garbage = data.garbage;
+    this.linkScore = data.linkScore;
+    this.totalScore = data.totalScore;
+    this.linkGarbage = data.linkGarbage;
+    this.totalGarbage = data.totalGarbage;
+    this.linkPuyoCleared = data.linkPuyoCleared;
+    this.linkTotalBonus = data.linkTotalBonus;
+    this.oldLeftoverNuisance = data.oldLeftoverNuisance;
+    this.newLeftoverNuisance = data.newLeftoverNuisance;
     this.chainLength = data.chainLength;
     this.requiresDrop = data.requiresDrop;
     this.requiresPop = data.requiresPop;
     this.toDrop = data.toDrop;
-    this.toPop = data.toPop;
+    this.colorsToPop = data.colorsToPop;
+    this.garbageToPop = data.garbageToPop;
     this.action = data.action;
   }
 
@@ -51,6 +74,60 @@ class MatrixState {
     }
 
     return this;
+  }
+
+  public getState(): StateData {
+    return {
+      matrix: this.matrix,
+      linkScore: this.linkScore,
+      totalScore: this.totalScore,
+      linkGarbage: this.linkGarbage,
+      totalGarbage: this.totalGarbage,
+      linkPuyoCleared: this.linkPuyoCleared,
+      linkTotalBonus: this.linkTotalBonus,
+      oldLeftoverNuisance: this.oldLeftoverNuisance,
+      newLeftoverNuisance: this.newLeftoverNuisance,
+      chainLength: this.chainLength,
+      requiresDrop: this.requiresDrop,
+      requiresPop: this.requiresPop,
+      toDrop: this.toDrop,
+      colorsToPop: this.colorsToPop,
+      garbageToPop: this.garbageToPop,
+      action: this.action,
+    };
+  }
+
+  /** Convert to char codes, transpose, and print the matrix */
+  public printMatrix(): void {
+    const charMatrix = puyoToCharMatrix(this.matrix);
+    const transpose = transposeMatrix<string>(charMatrix);
+
+    console.log(transpose);
+  }
+
+  public printState(): void {
+    const state = this.getState();
+    const charMatrix = puyoToCharMatrix(state.matrix);
+    const transpose = transposeMatrix<string>(charMatrix);
+
+    console.log({
+      matrix: transpose,
+      linkScore: this.linkScore,
+      totalScore: this.totalScore,
+      linkGarbage: this.linkGarbage,
+      totalGarbage: this.totalGarbage,
+      linkPuyoCleared: this.linkPuyoCleared,
+      linkTotalBonus: this.linkTotalBonus,
+      oldLeftoverNuisance: this.oldLeftoverNuisance,
+      newLeftoverNuisance: this.newLeftoverNuisance,
+      chainLength: this.chainLength,
+      requiresDrop: this.requiresDrop,
+      requiresPop: this.requiresPop,
+      toDrop: this.toDrop,
+      colorsToPop: this.colorsToPop,
+      garbageToPop: this.garbageToPop,
+      action: this.action,
+    });
   }
 }
 
