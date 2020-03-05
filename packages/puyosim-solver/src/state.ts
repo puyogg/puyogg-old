@@ -8,7 +8,8 @@ interface StateData {
   totalScore: number;
   linkGarbage: number;
   totalGarbage: number;
-  linkPuyoCleared: number;
+  linkPuyoCountBonus: number;
+  linkPointPuyoBonus: number;
   linkTotalBonus: number;
   oldLeftoverNuisance: number; // Leftover nuisance points, informed by the previous link
   newLeftoverNuisance: number; // Next NL count, to send to the next link
@@ -28,7 +29,8 @@ class MatrixState {
   totalScore: number;
   linkGarbage: number;
   totalGarbage: number;
-  linkPuyoCleared: number;
+  linkPuyoCountBonus: number;
+  linkPointPuyoBonus: number;
   linkTotalBonus: number;
   oldLeftoverNuisance: number;
   newLeftoverNuisance: number;
@@ -46,7 +48,8 @@ class MatrixState {
     this.totalScore = data.totalScore;
     this.linkGarbage = data.linkGarbage;
     this.totalGarbage = data.totalGarbage;
-    this.linkPuyoCleared = data.linkPuyoCleared;
+    this.linkPuyoCountBonus = data.linkPuyoCountBonus;
+    this.linkPointPuyoBonus = data.linkPointPuyoBonus;
     this.linkTotalBonus = data.linkTotalBonus;
     this.oldLeftoverNuisance = data.oldLeftoverNuisance;
     this.newLeftoverNuisance = data.newLeftoverNuisance;
@@ -83,7 +86,8 @@ class MatrixState {
       totalScore: this.totalScore,
       linkGarbage: this.linkGarbage,
       totalGarbage: this.totalGarbage,
-      linkPuyoCleared: this.linkPuyoCleared,
+      linkPuyoCountBonus: this.linkPuyoCountBonus,
+      linkPointPuyoBonus: this.linkPointPuyoBonus,
       linkTotalBonus: this.linkTotalBonus,
       oldLeftoverNuisance: this.oldLeftoverNuisance,
       newLeftoverNuisance: this.newLeftoverNuisance,
@@ -116,7 +120,8 @@ class MatrixState {
       totalScore: this.totalScore,
       linkGarbage: this.linkGarbage,
       totalGarbage: this.totalGarbage,
-      linkPuyoCleared: this.linkPuyoCleared,
+      linkPuyoCountBonus: this.linkPuyoCountBonus,
+      linkPointPuyoBonus: this.linkPointPuyoBonus,
       linkTotalBonus: this.linkTotalBonus,
       oldLeftoverNuisance: this.oldLeftoverNuisance,
       newLeftoverNuisance: this.newLeftoverNuisance,

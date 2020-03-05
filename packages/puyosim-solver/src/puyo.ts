@@ -60,16 +60,22 @@ class Puyo {
 
   /** Returns true if Puyo is red, green, blue, yellow, or purple. */
   public isColored(): boolean {
-    return this.p >= Color.RED && this.p <= Color.PURPLE;
+    return (
+      this.p === Color.RED ||
+      this.p === Color.GREEN ||
+      this.p === Color.BLUE ||
+      this.p === Color.YELLOW ||
+      this.p === Color.PURPLE
+    );
   }
 
   public isNone(): boolean {
     return this.p === Color.NONE;
   }
 
-  /** Despite the name this function returns true if the Puyo is Garbage or Hard */
-  public isGarbage(): boolean {
-    return this.p === Color.GARBAGE || this.p === Color.HARD;
+  /** Returns true if the Puyo is Garbage, Hard, Point Puyo, or Sun Puyo */
+  public isNuisance(): boolean {
+    return this.p === Color.GARBAGE || this.p === Color.HARD || this.p === Color.POINT || this.p === Color.SUN;
   }
 
   public isBlock(): boolean {

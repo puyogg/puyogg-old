@@ -1,4 +1,4 @@
-import Puyo, { Color, COLOR_CODE, COLOR_NAME } from '../src/puyo';
+import Puyo, { Color, COLOR_NAME } from '../src/puyo';
 
 describe('Puyo.ts: Puyo.getName()', () => {
   test.each([
@@ -66,6 +66,6 @@ describe('Puyo.ts: Puyo.isGarbage()', () => {
     ${Color.STONE}   | ${COLOR_NAME[Color.STONE]}   | ${false}
     ${Color.BLOCK}   | ${COLOR_NAME[Color.BLOCK]}   | ${false}
   `('Is a $name Puyo garbage? $bool', ({ int, bool }) => {
-    expect(new Puyo(int, 0, 0).isGarbage()).toBe(bool);
+    expect(new Puyo(int, 0, 0).isNuisance()).toBe(bool);
   });
 });

@@ -34,7 +34,8 @@ export default class ChainSolver {
         totalScore: 0,
         linkGarbage: 0,
         totalGarbage: 0,
-        linkPuyoCleared: 0,
+        linkPuyoCountBonus: 0,
+        linkPointPuyoBonus: 0,
         linkTotalBonus: 0,
         oldLeftoverNuisance: 0,
         newLeftoverNuisance: 0,
@@ -107,7 +108,8 @@ export default class ChainSolver {
         totalScore: state.totalScore,
         linkGarbage: state.linkGarbage,
         totalGarbage: state.totalGarbage,
-        linkPuyoCleared: state.linkPuyoCleared,
+        linkPuyoCountBonus: state.linkPuyoCountBonus,
+        linkPointPuyoBonus: state.linkPointPuyoBonus,
         linkTotalBonus: state.linkTotalBonus,
         oldLeftoverNuisance: state.oldLeftoverNuisance,
         newLeftoverNuisance: state.newLeftoverNuisance,
@@ -201,29 +203,35 @@ export default class ChainSolver {
     const cols = this.settings.cols;
     const hrows = this.settings.hrows;
 
+    // Check for SEGA vs COMPILE behavior for garbage in the hidden row.
+    // In SEGA games, Garbage in the hidden rows can be cleared by pops in the visible region.
+    // In COMPILE games, garbage in the hidden rows aren't affected by anything.
+    const topRowLimit = this.settings.clearGarbageInHrows ? 0 : hrows;
+
     const garbageToPop = [];
 
     for (const group of state.colorsToPop) {
       for (const puyo of group) {
         const x = puyo.x;
         const y = puyo.y;
-        // Check up
-        if (y > hrows && matrix[x][y - 1].isGarbage()) {
+
+        // Check up.
+        if (y > topRowLimit && matrix[x][y - 1].isNuisance()) {
           garbageToPop.push(matrix[x][y - 1]);
         }
 
         // Check down
-        if (y < rows - 1 && matrix[x][y + 1].isGarbage()) {
+        if (y < rows - 1 && matrix[x][y + 1].isNuisance()) {
           garbageToPop.push(matrix[x][y + 1]);
         }
 
         // Check left
-        if (x > 0 && matrix[x - 1][y].isGarbage()) {
+        if (x > 0 && matrix[x - 1][y].isNuisance()) {
           garbageToPop.push(matrix[x - 1][y]);
         }
 
         // Check right
-        if (x < cols - 1 && matrix[x + 1][y].isGarbage()) {
+        if (x < cols - 1 && matrix[x + 1][y].isNuisance()) {
           garbageToPop.push(matrix[x + 1][y]);
         }
       }
@@ -239,6 +247,11 @@ export default class ChainSolver {
 
     const state = this.getLatestState();
     const colorsToPop = state.colorsToPop;
+    const garbageToPop = state.garbageToPop;
+
+    if (state.linkScore > 0) {
+      console.log('Somehow this was called even though the score was already calcualted.');
+    }
 
     // Get chain power from table
     const CP = this.settings.chainPower[state.chainLength - 1];
@@ -261,17 +274,26 @@ export default class ChainSolver {
     }, 0);
 
     // Bounds check to keep totalBonus within 1 to 999, inclusive
-    let totalBonus = CP + CB + GB;
-    if (totalBonus === 0) {
-      totalBonus = 1;
-    } else if (totalBonus > 999) {
-      totalBonus = 999;
+    const totalBonus = Math.min(Math.max(CP + CB + GB, 1), 999);
+
+    // Count the number of Point Puyos
+    const ppMap = new Map();
+    for (const garbage of garbageToPop) {
+      if (garbage.p === Color.POINT) {
+        ppMap.set(garbage.x + ',' + garbage.y, garbage);
+      }
     }
+    const PB = ppMap.size * 50;
 
     // Update state with its calculated link score
-    state.linkScore = 10 * PC * totalBonus;
-    state.totalScore += state.linkScore;
-    state.linkPuyoCleared = PC;
+    // This gets really confusing when Point Puyos are involved.
+    // In-game, the score will display (10 * PC + PB) * totalBonus and add that the displayed score.
+    // But for the garbage calculation, the game actually uses (10 * PC) * totalBonus + PB
+    // The Puyo Nexus chain simulator doesn't display the added "fake" score.
+    state.linkScore = 10 * PC * totalBonus + PB;
+    state.totalScore += (10 * PC + PB) * totalBonus;
+    state.linkPuyoCountBonus = PC;
+    state.linkPointPuyoBonus = PB;
     state.linkTotalBonus = totalBonus;
 
     return this;
@@ -279,15 +301,25 @@ export default class ChainSolver {
 
   private calculateLinkGarbage(): ChainSolver {
     const state = this.getLatestState();
+    const garbageToPop = state.garbageToPop;
 
     // Calculate "Nuisance Points", "Nuisance Count", and "Leftover Nuisance"
     const NP = state.linkScore / this.settings.targetPoint + state.oldLeftoverNuisance;
     const NC = Math.floor(NP);
     const NL = NP - NC;
 
+    // Calculate the additional garbage added by SUN Puyos
+    const sun = new Map();
+    for (const garbage of garbageToPop) {
+      if (garbage.p === Color.SUN) {
+        sun.set(garbage.x + ',' + garbage.y, garbage);
+      }
+    }
+    const sunBonus = state.chainLength === 1 ? 3 * sun.size : 6 * (state.chainLength - 1) * sun.size;
+
     // Update state with its calculated garbage count
     state.linkGarbage = NC;
-    state.totalGarbage += state.linkGarbage;
+    state.totalGarbage += state.linkGarbage + sunBonus;
     state.newLeftoverNuisance = NL;
 
     return this;
@@ -311,7 +343,7 @@ export default class ChainSolver {
       const targetPuyo = poppedMatrix[garbage.x][garbage.y];
       if (targetPuyo.p === Color.HARD) {
         targetPuyo.p = Color.GARBAGE;
-      } else if (targetPuyo.p === Color.GARBAGE) {
+      } else if (targetPuyo.p === Color.GARBAGE || targetPuyo.p === Color.POINT || targetPuyo.p === Color.SUN) {
         targetPuyo.p = Color.NONE;
       }
     }
@@ -324,7 +356,8 @@ export default class ChainSolver {
         totalScore: state.totalScore,
         linkGarbage: 0,
         totalGarbage: state.totalGarbage,
-        linkPuyoCleared: 0,
+        linkPuyoCountBonus: 0,
+        linkPointPuyoBonus: 0,
         linkTotalBonus: 0,
         oldLeftoverNuisance: state.newLeftoverNuisance,
         newLeftoverNuisance: 0,
@@ -350,7 +383,7 @@ export default class ChainSolver {
     } else if (state.action === 'NEEDS_TO_DROP') {
       this.pushDroppedMatrix(); // Leads to 'CHECK_FOR_POPS'
     } else if (state.action === 'CHECK_FOR_POPS') {
-      this.calculatePops();
+      this.calculatePops(); // Leads to 'NEEDS_TO_POP' or finished
       this.calculateGarbagePops();
 
       if (state.requiresPop) {

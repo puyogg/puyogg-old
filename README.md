@@ -11,6 +11,15 @@ yarn install
 yarn bootstrap
 ```
 
+### Cross-platform error
+```
+> rm -rf ./dist && rm -rf tsconfig.build.tsbuildinfo
+'rm' is not recognized as an internal or external command,
+```
+If you try to build the project on Windows cmd or PowerShell, this error will get thrown because the build scripts call the `rm` bash command, but `rm` is only for Unix systems.
+
+Try using [Git BASH](https://gitforwindows.org/).
+
 ## Adding new packages
 New packages should be added to the `packages/` folder using this structure:
 

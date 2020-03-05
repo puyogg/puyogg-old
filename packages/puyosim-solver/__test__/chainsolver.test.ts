@@ -1,7 +1,7 @@
 import ChainSolver from '../src/index';
 import { defaultSettings } from '../src/settings';
 import Puyo, { Color } from '../src/puyo';
-import { charToPuyoMatrix, transposeMatrix, puyoToCharMatrix } from '../src/matrix';
+import { puyoToCharMatrix } from '../src/matrix';
 
 describe('4-Color 5 Chain with some Hard and Garbage Puyos', () => {
   const testMatrix = [
@@ -212,5 +212,100 @@ describe('Chain with Block Puyos', () => {
   test("Final matrix should match 'final'", () => {
     const matrix = puyoToCharMatrix(solver.getLatestState().matrix);
     expect(matrix).toEqual(final);
+  });
+});
+
+describe('Point Puyo', () => {
+  const testMatrix = [
+    ['0', '0', '0', '0', '0', '0', '0', '0', '0', 'N', 'R', 'R', 'R'],
+    ['0', '0', '0', '0', '0', '0', '0', '0', 'N', 'R', 'G', 'G', 'G'],
+    ['0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', 'G'],
+    ['0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0'],
+    ['0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0'],
+    ['0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0'],
+  ];
+
+  const settings = defaultSettings();
+  const solver = new ChainSolver(testMatrix, settings);
+
+  test('Simulate chain', () => {
+    const simulateChain = jest.fn(() => {
+      solver.simulateChain();
+    });
+    simulateChain();
+    expect(simulateChain).toHaveReturned();
+  });
+
+  test('Score is 1160', () => {
+    expect(solver.getLatestState().totalScore).toBe(1160);
+  });
+
+  test('Garbage Count is 10', () => {
+    expect(solver.getLatestState().totalGarbage).toBe(6);
+  });
+});
+
+describe('SUN Puyo', () => {
+  const testMatrix = [
+    ['0', '0', '0', '0', '0', '0', '0', '0', '0', 'S', 'R', 'R', 'R'],
+    ['0', '0', '0', '0', '0', '0', '0', '0', 'S', 'R', 'G', 'G', 'G'],
+    ['0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', 'S', 'G'],
+    ['0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0'],
+    ['0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0'],
+    ['0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0'],
+  ];
+
+  const settings = defaultSettings();
+  const solver = new ChainSolver(testMatrix, settings);
+
+  test('Simulate chain', () => {
+    const simulateChain = jest.fn(() => {
+      solver.simulateChain();
+    });
+    simulateChain();
+    expect(simulateChain).toHaveReturned();
+  });
+
+  test('Score is 360', () => {
+    expect(solver.getLatestState().totalScore).toBe(360);
+  });
+
+  test('Garbage Count is 10', () => {
+    expect(solver.getLatestState().totalGarbage).toBe(20);
+  });
+});
+
+describe('Clear Garbage in the hidden row (Puyo Puyo Champions behavior, default for this simulator)', () => {
+  const input = [
+    ['J', 'G', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X'],
+    ['H', 'G', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X'],
+    ['J', 'G', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X'],
+    ['0', 'G', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X'],
+    ['0', '0', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X'],
+    ['0', '0', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X'],
+  ];
+
+  const expected = [
+    ['0', '0', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X'],
+    ['0', 'J', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X'],
+    ['0', '0', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X'],
+    ['0', '0', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X'],
+    ['0', '0', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X'],
+    ['0', '0', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X', 'X'],
+  ];
+
+  const settings = defaultSettings();
+  const solver = new ChainSolver(input, settings);
+
+  test('Simulate chain', () => {
+    const simulateChain = jest.fn(() => {
+      solver.simulateChain();
+    });
+    simulateChain();
+    expect(simulateChain).toHaveReturned();
+  });
+
+  test('Input = expected', () => {
+    expect(puyoToCharMatrix(solver.getLatestState().matrix)).toEqual(expected);
   });
 });
