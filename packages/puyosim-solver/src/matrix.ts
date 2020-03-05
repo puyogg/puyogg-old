@@ -86,4 +86,20 @@ function clonePuyoMatrix(puyoMatrix: Puyo[][]): Puyo[][] {
   return matrix;
 }
 
-export { clonePuyoMatrix, initPuyoMatrix, initPrimitiveMatrix, charToPuyoMatrix, puyoToCharMatrix, transposeMatrix };
+function resetPrimitiveMatrix<T>(matrix: T[][], value: T): void {
+  for (let x = 0; x < matrix.length; x++) {
+    for (let y = 0; y < matrix[0].length; y++) {
+      matrix[x][y] = value;
+    }
+  }
+}
+
+export {
+  clonePuyoMatrix,
+  initPuyoMatrix,
+  initPrimitiveMatrix,
+  charToPuyoMatrix,
+  puyoToCharMatrix,
+  resetPrimitiveMatrix,
+  transposeMatrix,
+};

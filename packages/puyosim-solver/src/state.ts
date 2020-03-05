@@ -19,6 +19,8 @@ interface StateData {
   toDrop: number[][];
   colorsToPop: Puyo[][];
   garbageToPop: Puyo[];
+  pointPuyoToPop: Map<string, Puyo>;
+  sunPuyoToPop: Map<string, Puyo>;
   action: NextAction;
 }
 
@@ -40,6 +42,8 @@ class MatrixState {
   toDrop: number[][];
   colorsToPop: Puyo[][];
   garbageToPop: Puyo[];
+  pointPuyoToPop: Map<string, Puyo>;
+  sunPuyoToPop: Map<string, Puyo>;
   action: NextAction;
 
   constructor(data: StateData) {
@@ -59,6 +63,8 @@ class MatrixState {
     this.toDrop = data.toDrop;
     this.colorsToPop = data.colorsToPop;
     this.garbageToPop = data.garbageToPop;
+    this.pointPuyoToPop = data.pointPuyoToPop;
+    this.sunPuyoToPop = data.sunPuyoToPop;
     this.action = data.action;
   }
 
@@ -97,6 +103,8 @@ class MatrixState {
       toDrop: this.toDrop,
       colorsToPop: this.colorsToPop,
       garbageToPop: this.garbageToPop,
+      pointPuyoToPop: this.pointPuyoToPop,
+      sunPuyoToPop: this.sunPuyoToPop,
       action: this.action,
     };
   }
@@ -131,6 +139,8 @@ class MatrixState {
       toDrop: this.toDrop,
       colorsToPop: this.colorsToPop,
       garbageToPop: this.garbageToPop,
+      pointPuyoToPop: this.pointPuyoToPop,
+      sunPuyoToPop: this.sunPuyoToPop,
       action: this.action,
     });
   }

@@ -1,6 +1,6 @@
 import Puyo, { Color } from './puyo';
-import { Settings } from './settings';
-import { clonePuyoMatrix, initPuyoMatrix, initPrimitiveMatrix, charToPuyoMatrix } from './matrix';
+import { Settings, defaultSettings } from './settings';
+import { clonePuyoMatrix, initPuyoMatrix, initPrimitiveMatrix, charToPuyoMatrix, resetPrimitiveMatrix } from './matrix';
 import { MatrixState } from './state';
 
 // Puyo Matrix Type Guard
@@ -17,15 +17,21 @@ export default class ChainSolver {
   settings: Settings;
   inputMatrix: Puyo[][];
   matrixStates: MatrixState[];
+  private checkMatrix: boolean[][];
+  private solveInPlace: boolean;
 
-  constructor(inputMatrix: Puyo[][] | string[][], settings: Settings) {
+  constructor(inputMatrix: Puyo[][] | string[][], settings: Settings, solveInPlace = false) {
     this.settings = settings;
+    this.solveInPlace = solveInPlace;
 
+    // Initialize matrices
     if (isCharMatrix(inputMatrix)) {
       this.inputMatrix = charToPuyoMatrix(inputMatrix);
     } else if (isPuyoMatrix(inputMatrix)) {
       this.inputMatrix = inputMatrix;
     }
+
+    this.checkMatrix = initPrimitiveMatrix<boolean>(false, this.settings.rows, this.settings.cols);
 
     this.matrixStates = [
       new MatrixState({
@@ -45,12 +51,14 @@ export default class ChainSolver {
         toDrop: initPrimitiveMatrix(0, this.settings.rows, this.settings.cols),
         colorsToPop: [],
         garbageToPop: [],
+        pointPuyoToPop: new Map<string, Puyo>(),
+        sunPuyoToPop: new Map<string, Puyo>(),
         action: 'CHECK_FOR_DROPS',
       }),
     ];
   }
 
-  private calculateDrops(): ChainSolver {
+  private calculateDrops(): void {
     const state = this.matrixStates[this.matrixStates.length - 1];
     const matrix = state.matrix;
     const toDrop = state.toDrop;
@@ -78,16 +86,36 @@ export default class ChainSolver {
     if (state.action !== 'NEEDS_TO_DROP') {
       state.setActionState('CHECK_FOR_POPS');
     }
-
-    return this;
   }
 
-  private pushDroppedMatrix(): ChainSolver {
+  private pushDroppedMatrix(): void {
     const state = this.matrixStates[this.matrixStates.length - 1];
     const toDrop = state.toDrop;
     const matrix = state.matrix;
     const rows = this.settings.rows;
     const cols = this.settings.cols;
+
+    if (this.solveInPlace) {
+      // Modify the current matrix
+      for (let x = 0; x < cols; x++) {
+        for (let y = rows - 1; y >= 0; y--) {
+          if (!matrix[x][y].isNone()) {
+            const toY = toDrop[x][y] + y;
+            matrix[x][toY].setColor(matrix[x][y].p);
+            if (y !== toY) {
+              matrix[x][y].setColor(Color.NONE);
+            }
+          }
+
+          // Reset the toDrop value for the next run
+          toDrop[x][y] = 0;
+        }
+      }
+
+      state.setActionState('CHECK_FOR_POPS');
+
+      return;
+    }
 
     // Generate a new matrix
     const droppedMatrix = initPuyoMatrix(rows, cols, Color.NONE);
@@ -119,16 +147,17 @@ export default class ChainSolver {
         toDrop: initPrimitiveMatrix(0, rows, cols),
         colorsToPop: [],
         garbageToPop: [],
+        pointPuyoToPop: new Map<string, Puyo>(),
+        sunPuyoToPop: new Map<string, Puyo>(),
         action: 'CHECK_FOR_POPS',
       }),
     );
-
-    return this;
   }
 
-  private calculatePops(): ChainSolver {
+  private calculatePops(): void {
     const groups: Puyo[][] = [];
-    const checked = initPrimitiveMatrix(false, this.settings.rows, this.settings.cols);
+    // const checked = initPrimitiveMatrix(false, this.settings.rows, this.settings.cols);
+    const checked = this.checkMatrix;
     const state = this.matrixStates[this.matrixStates.length - 1];
     const matrix = state.matrix;
 
@@ -187,16 +216,17 @@ export default class ChainSolver {
       }
     }
 
+    // Reset check matrix for next run
+    resetPrimitiveMatrix(this.checkMatrix, false);
+
     if (groups.length > 0) {
       state.setActionState('NEEDS_TO_POP');
       state.chainLength += 1;
       state.colorsToPop = groups;
     }
-
-    return this;
   }
 
-  private calculateGarbagePops(): ChainSolver {
+  private calculateGarbagePops(): void {
     const state = this.matrixStates[this.matrixStates.length - 1];
     const matrix = state.matrix;
     const rows = this.settings.rows;
@@ -208,7 +238,7 @@ export default class ChainSolver {
     // In COMPILE games, garbage in the hidden rows aren't affected by anything.
     const topRowLimit = this.settings.clearGarbageInHrows ? 0 : hrows;
 
-    const garbageToPop = [];
+    const garbageToPop: Puyo[] = [];
 
     for (const group of state.colorsToPop) {
       for (const puyo of group) {
@@ -237,21 +267,23 @@ export default class ChainSolver {
       }
     }
 
-    state.garbageToPop = garbageToPop;
+    // Put any Point or Sun Puyos into their unique set maps.
+    for (const garbage of garbageToPop) {
+      if (garbage.p === Color.POINT) {
+        state.pointPuyoToPop.set(garbage.x + ',' + garbage.y, garbage);
+      } else if (garbage.p === Color.SUN) {
+        state.sunPuyoToPop.set(garbage.x + ',' + garbage.y, garbage);
+      }
+    }
 
-    return this;
+    state.garbageToPop = garbageToPop;
   }
 
-  private calculateLinkScore(): ChainSolver {
+  private calculateLinkScore(): void {
     // https://puyonexus.com/wiki/Scoring
 
     const state = this.getLatestState();
     const colorsToPop = state.colorsToPop;
-    const garbageToPop = state.garbageToPop;
-
-    if (state.linkScore > 0) {
-      console.log('Somehow this was called even though the score was already calcualted.');
-    }
 
     // Get chain power from table
     const CP = this.settings.chainPower[state.chainLength - 1];
@@ -276,14 +308,8 @@ export default class ChainSolver {
     // Bounds check to keep totalBonus within 1 to 999, inclusive
     const totalBonus = Math.min(Math.max(CP + CB + GB, 1), 999);
 
-    // Count the number of Point Puyos
-    const ppMap = new Map();
-    for (const garbage of garbageToPop) {
-      if (garbage.p === Color.POINT) {
-        ppMap.set(garbage.x + ',' + garbage.y, garbage);
-      }
-    }
-    const PB = ppMap.size * 50;
+    // Calculate Point Puyo Bonus based on number of Point Puyos
+    const PB = state.pointPuyoToPop.size * this.settings.pointPuyoBonus;
 
     // Update state with its calculated link score
     // This gets really confusing when Point Puyos are involved.
@@ -295,13 +321,10 @@ export default class ChainSolver {
     state.linkPuyoCountBonus = PC;
     state.linkPointPuyoBonus = PB;
     state.linkTotalBonus = totalBonus;
-
-    return this;
   }
 
-  private calculateLinkGarbage(): ChainSolver {
+  private calculateLinkGarbage(): void {
     const state = this.getLatestState();
-    const garbageToPop = state.garbageToPop;
 
     // Calculate "Nuisance Points", "Nuisance Count", and "Leftover Nuisance"
     const NP = state.linkScore / this.settings.targetPoint + state.oldLeftoverNuisance;
@@ -309,27 +332,58 @@ export default class ChainSolver {
     const NL = NP - NC;
 
     // Calculate the additional garbage added by SUN Puyos
-    const sun = new Map();
-    for (const garbage of garbageToPop) {
-      if (garbage.p === Color.SUN) {
-        sun.set(garbage.x + ',' + garbage.y, garbage);
-      }
-    }
+    const sun = state.sunPuyoToPop;
     const sunBonus = state.chainLength === 1 ? 3 * sun.size : 6 * (state.chainLength - 1) * sun.size;
 
     // Update state with its calculated garbage count
     state.linkGarbage = NC;
     state.totalGarbage += state.linkGarbage + sunBonus;
     state.newLeftoverNuisance = NL;
-
-    return this;
   }
 
-  private pushPoppedMatrix(): ChainSolver {
+  private pushPoppedMatrix(): void {
     const state = this.matrixStates[this.matrixStates.length - 1];
     const matrix = state.matrix;
     const colorsToPop = state.colorsToPop;
     const garbageToPop = state.garbageToPop;
+
+    if (this.solveInPlace) {
+      // Reset the maps for the next run
+      state.pointPuyoToPop.clear();
+      state.sunPuyoToPop.clear();
+
+      for (const group of colorsToPop) {
+        for (const puyo of group) {
+          matrix[puyo.x][puyo.y].p = Color.NONE;
+        }
+      }
+
+      for (const garbage of garbageToPop) {
+        const targetPuyo = matrix[garbage.x][garbage.y];
+        if (targetPuyo.p === Color.HARD) {
+          targetPuyo.p = Color.GARBAGE;
+        } else if (targetPuyo.p === Color.GARBAGE || targetPuyo.p === Color.POINT || targetPuyo.p === Color.SUN) {
+          targetPuyo.p = Color.NONE;
+        }
+      }
+
+      // Reset some of the states
+      state.linkScore = 0;
+      state.linkGarbage = 0;
+      state.linkPuyoCountBonus = 0;
+      state.linkPointPuyoBonus = 0;
+      state.linkTotalBonus = 0;
+      state.oldLeftoverNuisance = state.newLeftoverNuisance;
+      state.newLeftoverNuisance = 0;
+      // state.toDrop should've already reset earlier
+      state.colorsToPop = [];
+      state.garbageToPop = [];
+      state.pointPuyoToPop.clear();
+      state.sunPuyoToPop.clear();
+      state.setActionState('CHECK_FOR_DROPS');
+
+      return;
+    }
 
     // Generate a new matrix
     const poppedMatrix = clonePuyoMatrix(matrix);
@@ -367,14 +421,14 @@ export default class ChainSolver {
         toDrop: initPrimitiveMatrix(0, this.settings.rows, this.settings.cols),
         colorsToPop: [],
         garbageToPop: [],
+        pointPuyoToPop: new Map<string, Puyo>(),
+        sunPuyoToPop: new Map<string, Puyo>(),
         action: 'CHECK_FOR_DROPS',
       }),
     );
-
-    return this;
   }
 
-  public simulateStep(): ChainSolver {
+  public simulateStep(): void {
     const state = this.getLatestState();
 
     if (state.action === 'CHECK_FOR_DROPS') {
@@ -396,16 +450,72 @@ export default class ChainSolver {
     } else if (state.action === 'NEEDS_TO_POP') {
       this.pushPoppedMatrix(); // Leads to 'CHECK_FOR_DROPS'
     }
-
-    return this;
   }
 
-  public simulateChain(): ChainSolver {
+  public simulateChain(): void {
     while (this.getLatestState().action !== 'FINISHED') {
       this.simulateStep();
     }
+  }
 
-    return this;
+  public reset(inputMatrix?: Puyo[][] | string[][], settings?: Settings): void {
+    if (inputMatrix) {
+      if (isCharMatrix(inputMatrix)) {
+        this.inputMatrix = charToPuyoMatrix(inputMatrix);
+      } else if (isPuyoMatrix(inputMatrix)) {
+        this.inputMatrix = inputMatrix;
+      }
+    }
+
+    if (settings) {
+      this.settings = settings;
+    }
+
+    if (this.solveInPlace) {
+      const state = this.matrixStates[0];
+      state.matrix = clonePuyoMatrix(this.inputMatrix);
+      state.linkScore = 0;
+      state.totalScore = 0;
+      state.linkGarbage = 0;
+      state.totalGarbage = 0;
+      state.linkPuyoCountBonus = 0;
+      state.linkPointPuyoBonus = 0;
+      state.linkTotalBonus = 0;
+      state.oldLeftoverNuisance = 0;
+      state.newLeftoverNuisance = 0;
+      state.chainLength = 0;
+      resetPrimitiveMatrix(state.toDrop, 0);
+      resetPrimitiveMatrix(this.checkMatrix, false);
+      state.colorsToPop = [];
+      state.garbageToPop = [];
+      state.pointPuyoToPop.clear();
+      state.sunPuyoToPop.clear();
+      state.setActionState('CHECK_FOR_DROPS');
+    }
+
+    this.matrixStates = [
+      new MatrixState({
+        matrix: clonePuyoMatrix(this.inputMatrix),
+        linkScore: 0,
+        totalScore: 0,
+        linkGarbage: 0,
+        totalGarbage: 0,
+        linkPuyoCountBonus: 0,
+        linkPointPuyoBonus: 0,
+        linkTotalBonus: 0,
+        oldLeftoverNuisance: 0,
+        newLeftoverNuisance: 0,
+        chainLength: 0,
+        requiresDrop: false,
+        requiresPop: false,
+        toDrop: initPrimitiveMatrix(0, this.settings.rows, this.settings.cols),
+        colorsToPop: [],
+        garbageToPop: [],
+        pointPuyoToPop: new Map<string, Puyo>(),
+        sunPuyoToPop: new Map<string, Puyo>(),
+        action: 'CHECK_FOR_DROPS',
+      }),
+    ];
   }
 
   public getState(index: number): MatrixState {
@@ -416,3 +526,5 @@ export default class ChainSolver {
     return this.matrixStates[this.matrixStates.length - 1];
   }
 }
+
+export { defaultSettings };

@@ -2,7 +2,7 @@
 https://puyo.gg/
 
 ## Project Setup
-Make sure you have [Yarn](https://yarnpkg.com/) installed as a package manager.
+Make sure you have [Yarn](https://yarnpkg.com/) installed as a package manager. Then do:
 ```bash
 # Install dependences for the top-level directory
 yarn install
