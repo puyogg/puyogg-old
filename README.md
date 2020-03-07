@@ -2,7 +2,7 @@
 https://puyo.gg/
 
 ## Project Setup
-Make sure you have [Yarn](https://yarnpkg.com/) installed as a package manager.
+Make sure you have [Yarn](https://yarnpkg.com/) installed as a package manager. Then do:
 ```bash
 # Install dependences for the top-level directory
 yarn install
@@ -10,6 +10,15 @@ yarn install
 # Use lerna to install dependencies for all packages
 yarn bootstrap
 ```
+
+### Cross-platform error
+```
+> rm -rf ./dist && rm -rf tsconfig.build.tsbuildinfo
+'rm' is not recognized as an internal or external command,
+```
+If you try to build the project on Windows cmd or PowerShell, this error will get thrown because the build scripts call the `rm` bash command, but `rm` is only for Unix systems.
+
+Try using [Git BASH](https://gitforwindows.org/).
 
 ## Adding new packages
 New packages should be added to the `packages/` folder using this structure:
