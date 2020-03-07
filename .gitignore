@@ -2,3 +2,4 @@
 node_modules
 tsconfig.build.tsbuildinfo
 dist
+lerna-debug.log
